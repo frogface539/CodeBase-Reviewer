@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+.agent/
+work/server.err
+work/server.out
+work/pydeps/
+work/packagetest/
+work/rundeps/
+work/testdeps/
