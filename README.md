@@ -19,7 +19,8 @@ python -m uvicorn ai_coding_agent.api.app:create_app --factory --host 127.0.0.1 
 
 Open:
 
-- Gradio UI: http://127.0.0.1:8000/ui/
+- Custom web app: http://127.0.0.1:8000/app/
+- Gradio fallback UI: http://127.0.0.1:8000/ui/
 - API docs: http://127.0.0.1:8000/docs
 - Health check: http://127.0.0.1:8000/health
 

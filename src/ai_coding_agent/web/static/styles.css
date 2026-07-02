@@ -1,0 +1,295 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #17202a;
+  --muted: #657282;
+  --line: #d9dee7;
+  --accent: #116466;
+  --accent-dark: #0b4547;
+  --soft: #e9f4f2;
+  --danger: #9f1d35;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #132124;
+  color: #f7fbfb;
+  padding: 28px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.sidebar h1 {
+  margin: 6px 0 10px;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.sidebar .muted {
+  color: #b7c4c5;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.sidebar .eyebrow {
+  color: #8bd1c8;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.status-grid div {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.status-grid span {
+  display: block;
+  color: #b7c4c5;
+  font-size: 12px;
+}
+
+.status-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+nav {
+  display: grid;
+  gap: 8px;
+}
+
+nav a {
+  color: #f7fbfb;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+nav a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+main {
+  padding: 28px;
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.toolbar,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.panel {
+  display: grid;
+  gap: 16px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #2f3c49;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--text);
+  font: 14px var(--sans);
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+  font-family: var(--mono);
+  line-height: 1.5;
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--soft);
+  border-color: var(--accent);
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  padding: 11px 15px;
+  cursor: pointer;
+  min-height: 42px;
+}
+
+button:hover {
+  background: var(--accent-dark);
+}
+
+button.secondary {
+  background: #e8edf1;
+  color: var(--text);
+}
+
+button.secondary:hover {
+  background: #dce4e9;
+}
+
+.actions,
+.split {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+}
+
+.split label {
+  flex: 1;
+}
+
+.output {
+  min-height: 120px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 14px;
+  font: 13px var(--mono);
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+.markdown {
+  font-family: var(--sans);
+  line-height: 1.55;
+}
+
+.markdown h2,
+.markdown h3 {
+  margin: 0 0 8px;
+}
+
+.markdown p {
+  margin: 0 0 10px;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 12px 20px;
+  padding: 0;
+}
+
+.markdown li {
+  margin: 4px 0;
+}
+
+.markdown code {
+  background: #e8edf1;
+  border-radius: 4px;
+  font-family: var(--mono);
+  padding: 2px 4px;
+}
+
+.markdown pre {
+  background: #132124;
+  border-radius: 8px;
+  color: #f7fbfb;
+  margin: 0 0 12px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.markdown pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .toolbar,
+  .split,
+  .panel-heading,
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

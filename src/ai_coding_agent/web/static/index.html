@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Coding Agent</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Workspace</p>
+          <h1>AI Coding Agent</h1>
+          <p class="muted">Inspect, explain, patch, and verify local repositories.</p>
+        </div>
+        <div class="status-grid">
+          <div>
+            <span>API</span>
+            <strong id="apiStatus">Checking</strong>
+          </div>
+          <div>
+            <span>LLM</span>
+            <strong id="llmStatus">Checking</strong>
+          </div>
+        </div>
+        <nav>
+          <a href="#repository">Repository</a>
+          <a href="#agent">Agent</a>
+          <a href="#history">History</a>
+          <a href="/docs">API Docs</a>
+          <a href="/ui/">Gradio</a>
+        </nav>
+      </aside>
+
+      <main>
+        <section class="toolbar">
+          <label>
+            Repository path
+            <input id="repositoryPath" type="text" />
+          </label>
+          <button id="loadStatus" class="secondary" type="button">Refresh Status</button>
+        </section>
+
+        <section id="repository" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Read only</p>
+              <h2>Repository</h2>
+            </div>
+            <div class="actions">
+              <button id="summarizeBtn" type="button">Summarize</button>
+              <button id="explainBtn" type="button">Explain</button>
+            </div>
+          </div>
+
+          <label>
+            Question
+            <textarea id="question" rows="3">What is this repository about?</textarea>
+          </label>
+
+          <div class="split">
+            <label>
+              Search query
+              <input id="searchQuery" type="text" placeholder="GitPatchApplier" />
+            </label>
+            <button id="searchBtn" class="secondary" type="button">Search</button>
+          </div>
+
+          <div class="output markdown" id="repositoryOutput">No repository action yet.</div>
+        </section>
+
+        <section id="agent" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Patch workflow</p>
+              <h2>Run Agent</h2>
+            </div>
+            <button id="runAgentBtn" type="button">Run Agent</button>
+          </div>
+
+          <label>
+            Instruction
+            <textarea id="instruction" rows="4" placeholder="Describe the code change you want."></textarea>
+          </label>
+
+          <label>
+            Manual patch diff
+            <textarea id="patchDiff" rows="8" placeholder="Optional unified diff. Leave empty to use the configured LLM."></textarea>
+          </label>
+
+          <div class="split">
+            <label>
+              Verification command
+              <input id="testCommand" type="text" placeholder="pytest" />
+            </label>
+            <label>
+              Max fix attempts
+              <input id="maxFixAttempts" type="number" min="0" max="5" value="1" />
+            </label>
+          </div>
+
+          <div class="output" id="agentOutput">No agent run yet.</div>
+        </section>
+
+        <section id="history" class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Saved locally</p>
+              <h2>History</h2>
+            </div>
+            <div class="actions">
+              <button id="historyBtn" class="secondary" type="button">Refresh</button>
+              <button id="clearHistoryBtn" class="secondary" type="button">Clear History</button>
+            </div>
+          </div>
+          <div class="output markdown" id="historyOutput">No history loaded.</div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app/app.js"></script>
+  </body>
+</html>

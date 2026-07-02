@@ -18,6 +18,9 @@ class RunStore(Protocol):
     def list(self) -> list[AgentResult]:
         """Return all persisted agent results."""
 
+    def clear(self) -> None:
+        """Remove all persisted agent results."""
+
 
 class JsonRunStore:
     """Stores agent results in a local JSON file."""
@@ -48,6 +51,12 @@ class JsonRunStore:
         raw = json.loads(self._path.read_text(encoding="utf-8"))
         return self._adapter.validate_python(raw)
 
+    def clear(self) -> None:
+        """Remove all stored agent results."""
+
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text("[]", encoding="utf-8")
+
 
 class ActivityStore(Protocol):
     """Protocol for persisting read-only UI activity."""
@@ -57,6 +66,9 @@ class ActivityStore(Protocol):
 
     def list(self) -> list[ActivityRecord]:
         """Return all persisted activity records."""
+
+    def clear(self) -> None:
+        """Remove all persisted activity records."""
 
 
 class JsonActivityStore:
@@ -87,3 +99,9 @@ class JsonActivityStore:
             return []
         raw = json.loads(self._path.read_text(encoding="utf-8"))
         return self._adapter.validate_python(raw)
+
+    def clear(self) -> None:
+        """Remove all stored activity records."""
+
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text("[]", encoding="utf-8")

@@ -8,6 +8,8 @@ import gradio as gr
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from ai_coding_agent.agents import CodingAgent
 from ai_coding_agent.agents.prompts import build_explanation_prompt
@@ -18,6 +20,7 @@ from ai_coding_agent.api.schemas import (
     RepositorySearchRequest,
 )
 from ai_coding_agent.core import (
+    ActivityRecord,
     AgentError,
     AgentRequest,
     AgentResult,
@@ -34,6 +37,7 @@ from ai_coding_agent.llm import (
 from ai_coding_agent.repository import GitPatchApplier, RepositoryReader
 from ai_coding_agent.storage import JsonActivityStore, JsonRunStore
 from ai_coding_agent.ui.gradio_app import create_gradio_app
+from ai_coding_agent.ui.history import format_history
 
 
 def create_app(history_path: Path | None = None) -> FastAPI:
@@ -41,6 +45,7 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
     load_dotenv(Path.cwd() / ".env")
     app = FastAPI(title="AI Coding Agent", version="0.1.0")
+    static_dir = Path(__file__).resolve().parents[1] / "web" / "static"
     reader = RepositoryReader()
     runner = CommandRunner()
     patch_applier = GitPatchApplier()
@@ -60,6 +65,13 @@ def create_app(history_path: Path | None = None) -> FastAPI:
     app.state.run_store = store
     app.state.activity_store = activity_store
     app.state.agent_factory = build_agent
+    app.mount("/app", StaticFiles(directory=static_dir, html=True), name="app")
+
+    @app.get("/")
+    def root() -> RedirectResponse:
+        """Redirect the root URL to the custom web frontend."""
+
+        return RedirectResponse(url="/app/")
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -83,7 +95,19 @@ def create_app(history_path: Path | None = None) -> FastAPI:
     def summarize_repository(request: RepositoryRequest) -> RepositorySummary:
         """Return a compact repository summary."""
 
-        return _handle_errors(lambda: reader.summarize(request.repository_path))
+        def summarize() -> RepositorySummary:
+            summary = reader.summarize(request.repository_path)
+            activity_store.save(
+                ActivityRecord(
+                    activity_type="Repository",
+                    repository_path=request.repository_path,
+                    title="Summarized repository",
+                    summary=f"Read {len(summary.files)} files.",
+                )
+            )
+            return summary
+
+        return _handle_errors(summarize)
 
     @app.post("/repositories/search")
     def search_repository(request: RepositorySearchRequest) -> RepositorySummary:
@@ -91,10 +115,19 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
         def search() -> RepositorySummary:
             root = request.repository_path.resolve()
-            return RepositorySummary(
+            summary = RepositorySummary(
                 root=root,
                 files=reader.search(root, request.query),
             )
+            activity_store.save(
+                ActivityRecord(
+                    activity_type="Repository",
+                    repository_path=request.repository_path,
+                    title=f"Searched for '{request.query}'",
+                    summary=f"Found {len(summary.files)} matching files.",
+                )
+            )
+            return summary
 
         return _handle_errors(search)
 
@@ -106,6 +139,14 @@ def create_app(history_path: Path | None = None) -> FastAPI:
             summary = reader.summarize(request.repository_path)
             answer = _build_llm(None).complete(
                 build_explanation_prompt(request.question, summary)
+            )
+            activity_store.save(
+                ActivityRecord(
+                    activity_type="Repository",
+                    repository_path=request.repository_path,
+                    title=request.question,
+                    summary=_shorten(answer),
+                )
             )
             return {"answer": answer}
 
@@ -135,6 +176,26 @@ def create_app(history_path: Path | None = None) -> FastAPI:
         """Return persisted agent run history."""
 
         return _handle_errors(store.list)
+
+    @app.get("/history")
+    def history() -> dict[str, str]:
+        """Return formatted user-facing history."""
+
+        def get_history() -> dict[str, str]:
+            return {"markdown": format_history(store.list(), activity_store.list())}
+
+        return _handle_errors(get_history)
+
+    @app.delete("/history")
+    def clear_history() -> dict[str, str]:
+        """Clear all saved agent and repository history."""
+
+        def clear() -> dict[str, str]:
+            store.clear()
+            activity_store.clear()
+            return {"markdown": format_history(store.list(), activity_store.list())}
+
+        return _handle_errors(clear)
 
     return gr.mount_gradio_app(
         app,
@@ -199,6 +260,13 @@ def _debug_llm_config() -> dict[str, str]:
         }
 
     return {"provider": "none", "model": "", "base_url": ""}
+
+
+def _shorten(text: str, max_length: int = 240) -> str:
+    clean_text = " ".join(text.split())
+    if len(clean_text) <= max_length:
+        return clean_text
+    return clean_text[: max_length - 3] + "..."
 
 
 if __name__ == "__main__":

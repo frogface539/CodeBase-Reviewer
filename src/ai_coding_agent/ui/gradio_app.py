@@ -74,7 +74,9 @@ def create_gradio_app(
             explanation_output = gr.Markdown(label="Explanation")
 
         with gr.Tab("History"):
-            history_button = gr.Button("Refresh")
+            with gr.Row():
+                history_button = gr.Button("Refresh")
+                clear_history_button = gr.Button("Clear History", variant="secondary")
             history_output = gr.Markdown(label="Runs")
 
         run_button.click(
@@ -123,6 +125,10 @@ def create_gradio_app(
         )
         history_button.click(
             fn=lambda: format_history(run_store.list(), activity_store.list()),
+            outputs=history_output,
+        )
+        clear_history_button.click(
+            fn=lambda: _clear_history(run_store, activity_store),
             outputs=history_output,
         )
 
@@ -225,6 +231,12 @@ def _explain(
         return answer
     except (AgentError, ValueError) as exc:
         return f"Error: {exc}"
+
+
+def _clear_history(run_store: RunStore, activity_store: ActivityStore) -> str:
+    run_store.clear()
+    activity_store.clear()
+    return format_history(run_store.list(), activity_store.list())
 
 
 def _shorten(text: str, max_length: int = 240) -> str:
