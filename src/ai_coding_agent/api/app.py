@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
 from ai_coding_agent.agents import CodingAgent
+from ai_coding_agent.agents.prompts import build_explanation_prompt
 from ai_coding_agent.api.schemas import (
     AgentRunRequest,
+    RepositoryExplainRequest,
     RepositoryRequest,
     RepositorySearchRequest,
 )
@@ -94,6 +96,19 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
         return _handle_errors(search)
 
+    @app.post("/repositories/explain")
+    def explain_repository(request: RepositoryExplainRequest) -> dict[str, str]:
+        """Return a read-only natural-language repository explanation."""
+
+        def explain() -> dict[str, str]:
+            summary = reader.summarize(request.repository_path)
+            answer = _build_llm(None).complete(
+                build_explanation_prompt(request.question, summary)
+            )
+            return {"answer": answer}
+
+        return _handle_errors(explain)
+
     @app.post("/agent/run")
     def run_agent(request: AgentRunRequest) -> AgentResult:
         """Apply a patch, optionally run verification, and persist the result."""
@@ -121,7 +136,7 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
     return gr.mount_gradio_app(
         app,
-        create_gradio_app(build_agent, reader, store),
+        create_gradio_app(build_agent, lambda: _build_llm(None), reader, store),
         path="/ui",
     )
 

@@ -8,15 +8,19 @@ import gradio as gr
 from pydantic import ValidationError
 
 from ai_coding_agent.agents import CodingAgent
+from ai_coding_agent.agents.prompts import build_explanation_prompt
 from ai_coding_agent.core import AgentError, AgentRequest
+from ai_coding_agent.llm import LlmClient
 from ai_coding_agent.repository import RepositoryReader
 from ai_coding_agent.storage import RunStore
 
 AgentFactory = Callable[[str | None], CodingAgent]
+LlmFactory = Callable[[], LlmClient]
 
 
 def create_gradio_app(
     agent_factory: AgentFactory,
+    llm_factory: LlmFactory,
     repository_reader: RepositoryReader,
     run_store: RunStore,
 ) -> gr.Blocks:
@@ -57,9 +61,15 @@ def create_gradio_app(
                 value=str(Path.cwd()),
             )
             query = gr.Textbox(label="Search query")
+            question = gr.Textbox(
+                label="Question",
+                value="What is this repository about?",
+            )
             summary_button = gr.Button("Summarize")
             search_button = gr.Button("Search")
+            explain_button = gr.Button("Explain", variant="primary")
             repository_output = gr.JSON(label="Repository output")
+            explanation_output = gr.Markdown(label="Explanation")
 
         with gr.Tab("History"):
             history_button = gr.Button("Refresh")
@@ -92,6 +102,16 @@ def create_gradio_app(
             fn=lambda repo, text: _search(repository_reader, repo, text),
             inputs=[repo_path_for_summary, query],
             outputs=repository_output,
+        )
+        explain_button.click(
+            fn=lambda repo, text: _explain(
+                llm_factory,
+                repository_reader,
+                repo,
+                text,
+            ),
+            inputs=[repo_path_for_summary, question],
+            outputs=explanation_output,
         )
         history_button.click(
             fn=lambda: [item.model_dump(mode="json") for item in run_store.list()],
@@ -149,3 +169,19 @@ def _search(
         }
     except (AgentError, ValueError) as exc:
         return {"error": str(exc)}
+
+
+def _explain(
+    llm_factory: LlmFactory,
+    reader: RepositoryReader,
+    repository_path: str,
+    question: str,
+) -> str:
+    try:
+        if not question.strip():
+            return "Enter a question."
+        summary = reader.summarize(Path(repository_path))
+        prompt = build_explanation_prompt(question.strip(), summary)
+        return llm_factory().complete(prompt)
+    except (AgentError, ValueError) as exc:
+        return f"Error: {exc}"

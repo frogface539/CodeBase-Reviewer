@@ -81,5 +81,6 @@ class RepositoryReader:
     def _is_ignored(self, path: Path, root: Path) -> bool:
         relative_parts = path.relative_to(root).parts
         return path.name in self._ignored_names or any(
-            part in self._ignored_dirs for part in relative_parts
+            part in self._ignored_dirs or part.endswith(".egg-info")
+            for part in relative_parts
         )

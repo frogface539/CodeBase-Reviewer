@@ -15,6 +15,9 @@ Every file hunk must include diff --git, --- path, +++ path, and @@ headers.
 Do not include ? marker lines, explanations, prose, or comments outside the diff.
 Keep changes minimal, readable, and production quality."""
 
+EXPLANATION_SYSTEM_PROMPT = """You are a senior Python software engineer.
+Explain repositories clearly and concisely. Do not propose code changes unless asked."""
+
 
 def build_patch_prompt(request: AgentRequest, summary: RepositorySummary) -> Prompt:
     """Build the initial patch-generation prompt."""
@@ -48,6 +51,23 @@ def build_fix_prompt(
             f"The verification command failed:\n{failure.stderr or failure.stdout}\n\n"
             f"Current repository files:\n{files}\n\n"
             "Generate a minimal unified diff patch that fixes the failure."
+        ),
+    )
+
+
+def build_explanation_prompt(
+    question: str,
+    summary: RepositorySummary,
+) -> Prompt:
+    """Build a read-only repository explanation prompt."""
+
+    files = _build_context(question, summary)
+    return Prompt(
+        system=EXPLANATION_SYSTEM_PROMPT,
+        user=(
+            f"Question:\n{question}\n\n"
+            f"Repository files:\n{files}\n\n"
+            "Answer the question using the repository context."
         ),
     )
 

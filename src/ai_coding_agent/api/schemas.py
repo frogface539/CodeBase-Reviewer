@@ -17,6 +17,12 @@ class RepositorySearchRequest(RepositoryRequest):
     query: str = Field(min_length=1)
 
 
+class RepositoryExplainRequest(RepositoryRequest):
+    """Request body for read-only repository explanations."""
+
+    question: str = Field(default="What is this repository about?", min_length=1)
+
+
 class AgentRunRequest(RepositoryRequest):
     """Request body for running the coding agent from HTTP."""
 
