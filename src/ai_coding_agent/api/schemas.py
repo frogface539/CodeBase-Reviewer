@@ -29,4 +29,4 @@ class AgentRunRequest(RepositoryRequest):
     instruction: str = Field(min_length=1)
     patch_diff: str | None = None
     test_command: list[str] | None = None
-    max_fix_attempts: int = Field(default=0, ge=0, le=5)
+    max_fix_attempts: int = Field(default=1, ge=0, le=5)

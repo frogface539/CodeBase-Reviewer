@@ -1,7 +1,19 @@
 """Main coding-agent orchestration."""
 
-from ai_coding_agent.agents.prompts import build_fix_prompt, build_patch_prompt
-from ai_coding_agent.core import AgentRequest, AgentResult, CommandResult, Patch
+from pathlib import Path
+
+from ai_coding_agent.agents.prompts import (
+    build_fix_prompt,
+    build_patch_prompt,
+    build_patch_repair_prompt,
+)
+from ai_coding_agent.core import (
+    AgentError,
+    AgentRequest,
+    AgentResult,
+    CommandResult,
+    Patch,
+)
 from ai_coding_agent.execution import CommandRunner
 from ai_coding_agent.llm import LlmClient
 from ai_coding_agent.repository import GitPatchApplier, RepositoryReader
@@ -31,10 +43,15 @@ class CodingAgent:
         repository_path = request.repository_path.resolve()
         summary = self._repository_reader.summarize(repository_path)
         patch_text = self._llm.complete(build_patch_prompt(request, summary)).strip()
-        self._patch_applier.apply(repository_path, Patch(diff=patch_text))
+        fix_attempts = 0
+        fix_attempts = self._apply_patch_with_retries(
+            request,
+            repository_path,
+            patch_text,
+            fix_attempts,
+        )
 
         test_result = None
-        fix_attempts = 0
         if request.test_command is not None:
             test_result = self._command_runner.run(
                 repository_path,
@@ -49,7 +66,12 @@ class CodingAgent:
                 fix_text = self._llm.complete(
                     build_fix_prompt(request, summary, test_result)
                 ).strip()
-                self._patch_applier.apply(repository_path, Patch(diff=fix_text))
+                fix_attempts = self._apply_patch_with_retries(
+                    request,
+                    repository_path,
+                    fix_text,
+                    fix_attempts,
+                )
                 test_result = self._command_runner.run(
                     repository_path,
                     request.test_command,
@@ -72,3 +94,23 @@ class CodingAgent:
         if test_result.succeeded:
             return "Patch applied and verification passed."
         return "Patch applied, but verification failed."
+
+    def _apply_patch_with_retries(
+        self,
+        request: AgentRequest,
+        repository_path: Path,
+        patch_text: str,
+        fix_attempts: int,
+    ) -> int:
+        while True:
+            try:
+                self._patch_applier.apply(repository_path, Patch(diff=patch_text))
+                return fix_attempts
+            except AgentError as exc:
+                if fix_attempts >= request.max_fix_attempts:
+                    raise
+                fix_attempts += 1
+                summary = self._repository_reader.summarize(repository_path)
+                patch_text = self._llm.complete(
+                    build_patch_repair_prompt(request, summary, str(exc))
+                ).strip()

@@ -2,6 +2,7 @@
 
 from ai_coding_agent.core.errors import AgentError
 from ai_coding_agent.core.models import (
+    ActivityRecord,
     AgentRequest,
     AgentResult,
     CommandResult,
@@ -12,6 +13,7 @@ from ai_coding_agent.core.models import (
 
 __all__ = [
     "AgentError",
+    "ActivityRecord",
     "AgentRequest",
     "AgentResult",
     "CommandResult",

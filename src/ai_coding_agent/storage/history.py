@@ -6,7 +6,7 @@ from typing import Protocol
 
 from pydantic import TypeAdapter
 
-from ai_coding_agent.core import AgentResult
+from ai_coding_agent.core import ActivityRecord, AgentResult
 
 
 class RunStore(Protocol):
@@ -42,6 +42,46 @@ class JsonRunStore:
 
     def list(self) -> list[AgentResult]:
         """Return all stored agent results."""
+
+        if not self._path.exists():
+            return []
+        raw = json.loads(self._path.read_text(encoding="utf-8"))
+        return self._adapter.validate_python(raw)
+
+
+class ActivityStore(Protocol):
+    """Protocol for persisting read-only UI activity."""
+
+    def save(self, record: ActivityRecord) -> None:
+        """Persist one activity record."""
+
+    def list(self) -> list[ActivityRecord]:
+        """Return all persisted activity records."""
+
+
+class JsonActivityStore:
+    """Stores read-only UI activity in a local JSON file."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._adapter = TypeAdapter(list[ActivityRecord])
+
+    def save(self, record: ActivityRecord) -> None:
+        """Append an activity record to the JSON history file."""
+
+        items = self.list()
+        items.append(record)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(
+            json.dumps(
+                [item.model_dump(mode="json") for item in items],
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    def list(self) -> list[ActivityRecord]:
+        """Return all stored activity records."""
 
         if not self._path.exists():
             return []

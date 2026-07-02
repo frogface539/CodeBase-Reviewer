@@ -55,6 +55,26 @@ def build_fix_prompt(
     )
 
 
+def build_patch_repair_prompt(
+    request: AgentRequest,
+    summary: RepositorySummary,
+    failure: str,
+) -> Prompt:
+    """Build a prompt for repairing a patch that failed to apply."""
+
+    files = _build_context(f"{request.instruction}\n{failure}", summary)
+    return Prompt(
+        system=SYSTEM_PROMPT,
+        user=(
+            f"Instruction:\n{request.instruction}\n\n"
+            f"The previous patch did not apply:\n{failure}\n\n"
+            f"Current repository files:\n{files}\n\n"
+            "Generate a corrected minimal unified diff patch against the current "
+            "file contents."
+        ),
+    )
+
+
 def build_explanation_prompt(
     question: str,
     summary: RepositorySummary,

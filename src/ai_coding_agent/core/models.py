@@ -1,5 +1,6 @@
 """Shared Pydantic models for the coding agent."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -63,3 +64,18 @@ class AgentResult(BaseModel):
     patch_applied: bool
     test_result: CommandResult | None = None
     fix_attempts: int = 0
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+    )
+
+
+class ActivityRecord(BaseModel):
+    """A user-facing record of non-mutating UI activity."""
+
+    activity_type: str = Field(min_length=1)
+    repository_path: Path
+    title: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+    )

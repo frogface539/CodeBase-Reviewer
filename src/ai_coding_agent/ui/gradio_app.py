@@ -9,10 +9,11 @@ from pydantic import ValidationError
 
 from ai_coding_agent.agents import CodingAgent
 from ai_coding_agent.agents.prompts import build_explanation_prompt
-from ai_coding_agent.core import AgentError, AgentRequest
+from ai_coding_agent.core import ActivityRecord, AgentError, AgentRequest
 from ai_coding_agent.llm import LlmClient
 from ai_coding_agent.repository import RepositoryReader
-from ai_coding_agent.storage import RunStore
+from ai_coding_agent.storage import ActivityStore, RunStore
+from ai_coding_agent.ui.history import format_history
 
 AgentFactory = Callable[[str | None], CodingAgent]
 LlmFactory = Callable[[], LlmClient]
@@ -23,6 +24,7 @@ def create_gradio_app(
     llm_factory: LlmFactory,
     repository_reader: RepositoryReader,
     run_store: RunStore,
+    activity_store: ActivityStore,
 ) -> gr.Blocks:
     """Create the Gradio UI connected to agent services."""
 
@@ -49,7 +51,7 @@ def create_gradio_app(
                 label="Max fix attempts",
                 minimum=0,
                 maximum=5,
-                value=0,
+                value=1,
                 step=1,
             )
             run_button = gr.Button("Run", variant="primary")
@@ -73,7 +75,7 @@ def create_gradio_app(
 
         with gr.Tab("History"):
             history_button = gr.Button("Refresh")
-            history_output = gr.JSON(label="Runs")
+            history_output = gr.Markdown(label="Runs")
 
         run_button.click(
             fn=lambda repo, text, diff, command, attempts: _run_agent(
@@ -94,12 +96,17 @@ def create_gradio_app(
             outputs=run_output,
         )
         summary_button.click(
-            fn=lambda repo: _summarize(repository_reader, repo),
+            fn=lambda repo: _summarize(repository_reader, activity_store, repo),
             inputs=repo_path_for_summary,
             outputs=repository_output,
         )
         search_button.click(
-            fn=lambda repo, text: _search(repository_reader, repo, text),
+            fn=lambda repo, text: _search(
+                repository_reader,
+                activity_store,
+                repo,
+                text,
+            ),
             inputs=[repo_path_for_summary, query],
             outputs=repository_output,
         )
@@ -107,6 +114,7 @@ def create_gradio_app(
             fn=lambda repo, text: _explain(
                 llm_factory,
                 repository_reader,
+                activity_store,
                 repo,
                 text,
             ),
@@ -114,7 +122,7 @@ def create_gradio_app(
             outputs=explanation_output,
         )
         history_button.click(
-            fn=lambda: [item.model_dump(mode="json") for item in run_store.list()],
+            fn=lambda: format_history(run_store.list(), activity_store.list()),
             outputs=history_output,
         )
 
@@ -148,21 +156,43 @@ def _run_agent(
         return {"error": str(exc)}
 
 
-def _summarize(reader: RepositoryReader, repository_path: str) -> dict[str, object]:
+def _summarize(
+    reader: RepositoryReader,
+    activity_store: ActivityStore,
+    repository_path: str,
+) -> dict[str, object]:
     try:
-        return reader.summarize(Path(repository_path)).model_dump(mode="json")
+        summary = reader.summarize(Path(repository_path))
+        activity_store.save(
+            ActivityRecord(
+                activity_type="Repository",
+                repository_path=Path(repository_path),
+                title="Summarized repository",
+                summary=f"Read {len(summary.files)} files.",
+            )
+        )
+        return summary.model_dump(mode="json")
     except (AgentError, ValueError) as exc:
         return {"error": str(exc)}
 
 
 def _search(
     reader: RepositoryReader,
+    activity_store: ActivityStore,
     repository_path: str,
     query: str,
 ) -> dict[str, object]:
     try:
         root = Path(repository_path).resolve()
         files = reader.search(root, query)
+        activity_store.save(
+            ActivityRecord(
+                activity_type="Repository",
+                repository_path=Path(repository_path),
+                title=f"Searched for '{query}'",
+                summary=f"Found {len(files)} matching files.",
+            )
+        )
         return {
             "root": str(root),
             "files": [file.model_dump(mode="json") for file in files],
@@ -174,6 +204,7 @@ def _search(
 def _explain(
     llm_factory: LlmFactory,
     reader: RepositoryReader,
+    activity_store: ActivityStore,
     repository_path: str,
     question: str,
 ) -> str:
@@ -182,6 +213,22 @@ def _explain(
             return "Enter a question."
         summary = reader.summarize(Path(repository_path))
         prompt = build_explanation_prompt(question.strip(), summary)
-        return llm_factory().complete(prompt)
+        answer = llm_factory().complete(prompt)
+        activity_store.save(
+            ActivityRecord(
+                activity_type="Repository",
+                repository_path=Path(repository_path),
+                title=question.strip(),
+                summary=_shorten(answer),
+            )
+        )
+        return answer
     except (AgentError, ValueError) as exc:
         return f"Error: {exc}"
+
+
+def _shorten(text: str, max_length: int = 240) -> str:
+    clean_text = " ".join(text.split())
+    if len(clean_text) <= max_length:
+        return clean_text
+    return clean_text[: max_length - 3] + "..."

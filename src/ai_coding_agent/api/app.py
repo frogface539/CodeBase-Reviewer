@@ -32,7 +32,7 @@ from ai_coding_agent.llm import (
     OpenAiSettings,
 )
 from ai_coding_agent.repository import GitPatchApplier, RepositoryReader
-from ai_coding_agent.storage import JsonRunStore
+from ai_coding_agent.storage import JsonActivityStore, JsonRunStore
 from ai_coding_agent.ui.gradio_app import create_gradio_app
 
 
@@ -45,6 +45,7 @@ def create_app(history_path: Path | None = None) -> FastAPI:
     runner = CommandRunner()
     patch_applier = GitPatchApplier()
     store = JsonRunStore(history_path or Path(".agent") / "runs.json")
+    activity_store = JsonActivityStore(Path(".agent") / "activity.json")
 
     def build_agent(patch_diff: str | None = None) -> CodingAgent:
         return CodingAgent(
@@ -57,6 +58,7 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
     app.state.repository_reader = reader
     app.state.run_store = store
+    app.state.activity_store = activity_store
     app.state.agent_factory = build_agent
 
     @app.get("/health")
@@ -136,7 +138,13 @@ def create_app(history_path: Path | None = None) -> FastAPI:
 
     return gr.mount_gradio_app(
         app,
-        create_gradio_app(build_agent, lambda: _build_llm(None), reader, store),
+        create_gradio_app(
+            build_agent,
+            lambda: _build_llm(None),
+            reader,
+            store,
+            activity_store,
+        ),
         path="/ui",
     )
 
