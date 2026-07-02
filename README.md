@@ -9,7 +9,7 @@ endpoints, a custom HTML/CSS/JavaScript frontend, and a Gradio fallback UI.
 
 ## Demo
 
-[Watch the project demo video](DEMO_VIDEO_URL)
+[Watch the project demo video](https://drive.google.com/file/d/1dQB64iFpYh7nMV12c1wycrj0NLbAttha/view?usp=sharing)
 
 Replace `DEMO_VIDEO_URL` with your uploaded video link, such as a Loom, YouTube,
 Google Drive, or GitHub release asset URL.
